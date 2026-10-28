@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# IDEs
+.idea/
+.vscode/
+
+# Project specific data (ігноруємо згенеровані та отримані 3D-меші)
+data_to_send/
+received_data/
+*.obj
+*.gltf
