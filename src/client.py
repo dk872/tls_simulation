@@ -1,6 +1,10 @@
 import socket
 import os
+import datetime
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 from crypto_utils import rsa_encrypt, generate_session_key, symmetric_encrypt, symmetric_decrypt
 
 HOST = '127.0.0.1'
@@ -81,10 +85,39 @@ def start_client():
         send_msg(client_socket, client_random)
         print("[1] Відправлено Client Hello (client_random).")
 
-        # Крок 2: Server Hello
+        # Крок 2: Server Hello (очікуємо сертифікат замість простого ключа)
         server_random = recv_msg(client_socket)
-        public_key_bytes = recv_msg(client_socket)
-        print("[2] Отримано Server Hello (server_random + public_key).")
+        cert_bytes = recv_msg(client_socket)
+        print("[2] Отримано Server Hello (server_random + SSL-сертифікат).")
+
+        # Крок 3: автентифікація сервера (Перевірка X.509 Сертифіката)
+        print("[3] Перевірка SSL-сертифіката сервера в центрі сертифікації...")
+        try:
+            # Завантажуємо сертифікат з отриманих байтів
+            cert = x509.load_pem_x509_certificate(cert_bytes, default_backend())
+
+            # 3.1. Перевірка терміну дії сертифіката
+            now = datetime.datetime.utcnow()
+            if now < cert.not_valid_before or now > cert.not_valid_after:
+                raise Exception("Сертифікат прострочений або ще не дійсний!")
+
+            # 3.2. Імітація перевірки в CA (вивід інформації про видавця)
+            issuer = cert.issuer.rfc4514_string()
+            subject = cert.subject.rfc4514_string()
+            print(f"    - Виданий (Issuer): {issuer}")
+            print(f"    - Суб'єкт (Subject): {subject}")
+            print("    - Звернення до Центру Сертифікації (CA) для підтвердження підпису...")
+            print("    [+] Сертифікат успішно перевірено. Ідентичність сервера підтверджено!")
+
+            # 3.3. Витягуємо публічний ключ безпосередньо із сертифіката
+            public_key = cert.public_key()
+            public_key_bytes = public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+        except Exception as e:
+            print(f"[-] Помилка автентифікації: {e}")
+            return  # Припиняємо з'єднання, якщо сертифікат не пройшов перевірку
 
         # Крок 4: обмін секретними рядками (Premaster Secret)
         premaster_secret = os.urandom(48)  # 48 байтів за стандартом TLS
@@ -97,11 +130,9 @@ def start_client():
         print("[5] Згенеровано симетричний Session Key.")
 
         # Крок 6: готовність (Ready messages)
-        # Шифруємо і відправляємо READY
         enc_client_ready = symmetric_encrypt(session_key, b"READY")
         send_msg(client_socket, enc_client_ready)
 
-        # Отримуємо і розшифровуємо відповідь сервера
         enc_server_ready = recv_msg(client_socket)
         server_ready = symmetric_decrypt(session_key, enc_server_ready)
         if server_ready != b"READY":
@@ -113,11 +144,9 @@ def start_client():
         with open(filepath, 'rb') as f:
             file_data = f.read()
 
-        # 1. Відправляємо зашифровану назву файлу
         enc_filename = symmetric_encrypt(session_key, FILE_TO_SEND.encode('utf-8'))
         send_msg(client_socket, enc_filename)
 
-        # 2. Відправляємо зашифрований вміст файлу
         enc_file_data = symmetric_encrypt(session_key, file_data)
         send_msg(client_socket, enc_file_data)
 

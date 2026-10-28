@@ -2,7 +2,8 @@ import socket
 import threading
 import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-from crypto_utils import generate_rsa_keys, rsa_decrypt, generate_session_key, symmetric_encrypt, symmetric_decrypt
+from crypto_utils import (generate_rsa_keys_and_cert, rsa_decrypt, generate_session_key, symmetric_encrypt,
+                          symmetric_decrypt)
 
 HOST = '127.0.0.1'
 PORT = 65432
@@ -109,8 +110,8 @@ def start_server():
     os.makedirs(RECEIVED_DIR, exist_ok=True)
 
     # Генерація RSA ключів відбувається ОДИН раз при старті сервера
-    print("[*] Генерація серверних RSA ключів...")
-    private_key, public_key_bytes = generate_rsa_keys()
+    print("[*] Генерація серверних RSA ключів та X.509 сертифіката...")
+    private_key, public_key_bytes = generate_rsa_keys_and_cert()
     print("[*] Ключі успішно згенеровано.")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:

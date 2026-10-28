@@ -1,5 +1,8 @@
 import os
 import hashlib
+import datetime
+from cryptography import x509
+from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -25,6 +28,37 @@ def generate_rsa_keys():
     )
 
     return private_key, public_key_bytes
+
+
+def generate_rsa_keys_and_cert():
+    """Генерує RSA-ключі та самопідписаний сертифікат X.509 для сервера."""
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_key = private_key.public_key()
+
+    # Створюємо параметри сертифіката (Хто видав і кому видано)
+    subject = issuer = x509.Name([
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"KPI Secure Server"),
+        x509.NameAttribute(NameOID.COMMON_NAME, u"127.0.0.1"),
+    ])
+
+    # Збираємо сертифікат
+    cert = x509.CertificateBuilder().subject_name(
+        subject
+    ).issuer_name(
+        issuer
+    ).public_key(
+        public_key
+    ).serial_number(
+        x509.random_serial_number()
+    ).not_valid_before(
+        datetime.datetime.utcnow()
+    ).not_valid_after(
+        # Сертифікат дійсний 1 рік
+        datetime.datetime.utcnow() + datetime.timedelta(days=365)
+    ).sign(private_key, hashes.SHA256())
+
+    cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
+    return private_key, cert_bytes
 
 
 def rsa_encrypt(public_key_bytes: bytes, data: bytes) -> bytes:
