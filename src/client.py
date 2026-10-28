@@ -90,15 +90,15 @@ def start_client():
         cert_bytes = recv_msg(client_socket)
         print("[2] Отримано Server Hello (server_random + SSL-сертифікат).")
 
-        # Крок 3: автентифікація сервера (Перевірка X.509 Сертифіката)
+        # Крок 3: автентифікація сервера (перевірка X.509 сертифіката)
         print("[3] Перевірка SSL-сертифіката сервера в центрі сертифікації...")
         try:
             # Завантажуємо сертифікат з отриманих байтів
             cert = x509.load_pem_x509_certificate(cert_bytes, default_backend())
 
             # 3.1. Перевірка терміну дії сертифіката
-            now = datetime.datetime.utcnow()
-            if now < cert.not_valid_before or now > cert.not_valid_after:
+            now = datetime.datetime.now(datetime.timezone.utc)
+            if now < cert.not_valid_before_utc or now > cert.not_valid_after_utc:
                 raise Exception("Сертифікат прострочений або ще не дійсний!")
 
             # 3.2. Імітація перевірки в CA (вивід інформації про видавця)

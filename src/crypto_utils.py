@@ -42,6 +42,8 @@ def generate_rsa_keys_and_cert():
     ])
 
     # Збираємо сертифікат
+    now = datetime.datetime.now(datetime.timezone.utc)
+
     cert = x509.CertificateBuilder().subject_name(
         subject
     ).issuer_name(
@@ -51,10 +53,9 @@ def generate_rsa_keys_and_cert():
     ).serial_number(
         x509.random_serial_number()
     ).not_valid_before(
-        datetime.datetime.utcnow()
+        now
     ).not_valid_after(
-        # Сертифікат дійсний 1 рік
-        datetime.datetime.utcnow() + datetime.timedelta(days=365)
+        now + datetime.timedelta(days=365)
     ).sign(private_key, hashes.SHA256())
 
     cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
