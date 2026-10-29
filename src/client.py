@@ -1,6 +1,7 @@
 import socket
 import os
 import datetime
+import time
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -151,6 +152,9 @@ def start_client():
         send_msg(client_socket, enc_file_data)
 
         print(f"[7] Файл {FILE_TO_SEND} успішно зашифровано та відправлено!")
+
+        print("[*] Утримуємо захищене з'єднання 10 секунд для демонстрації All-to-One...")
+        time.sleep(10)
 
 
 if __name__ == "__main__":

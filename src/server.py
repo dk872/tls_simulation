@@ -98,6 +98,8 @@ def handle_client(conn, addr, private_key, public_key_bytes):
             print(f"[{addr}] 7. Успішно отримано та розшифровано 3D меш!")
             print(f"[{addr}] Файл збережено як: {filepath}\n")
 
+            recv_msg(conn)
+
     except Exception as e:
         print(f"[-] Помилка під час обслуговування клієнта {addr}: {e}")
     finally:
